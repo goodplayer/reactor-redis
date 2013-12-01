@@ -7,9 +7,8 @@ import reactoredis.*;
 import redis.clients.jedis.Jedis;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -21,18 +20,43 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ClientTest {
     private static byte[] DATA = "USER_INFO_12345678901234567890123456789021".getBytes();
 
-    private static AtomicInteger atomicInteger = new AtomicInteger(0);
-
-    private static final int TOTAL = 100000;
+    private static final int TOTAL = 1000000;
 
     private static long time1;
 
+    private static final double STATISTICS_RATE = 0.95;
+
+
+    static class ssss {
+        public int cnt = 0;
+    }
+
+    final static Map<String, ssss> local = new ConcurrentHashMap<String, ssss>();
+    static ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+
     public static void main(String[] args) throws InterruptedException {
+        scheduledExecutorService.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                int sum = 0;
+                for (Map.Entry<String, ssss> entry : local.entrySet()) {
+                    sum += entry.getValue().cnt;
+                }
+                if (sum >= (TOTAL * STATISTICS_RATE)) {//estimate, not exact
+                    long time2 = System.currentTimeMillis();
+                    long interval = time2 - time1;
+                    System.out.println(interval);
+                    System.out.println((TOTAL * STATISTICS_RATE / ((double) interval) * 1000) + " requests per second");
+                    System.out.println("statistic end: " + time2);
+                    scheduledExecutorService.shutdown();
+                }
+            }
+        }, 0, 100, TimeUnit.MILLISECONDS);
 
         ExecutorService executorService = Executors.newCachedThreadPool();
         final RedisClient redisClient = new RedisClient(
-                new InetSocketAddress("192.168.1.243", 6379),
-                8,
+                new InetSocketAddress("192.168.48.134", 6379),
+                4,
                 new ReactorFactory() {
                     private AtomicInteger idx = new AtomicInteger(0);
 
@@ -86,11 +110,12 @@ public class ClientTest {
                         }
                     });
                 }
+                System.out.println("send done: " + System.currentTimeMillis());
             }
         });
 
         time1 = System.currentTimeMillis();
-        System.out.println(time1);
+        System.out.println("start: " + time1);
 
         thread.start();
 
@@ -105,19 +130,27 @@ public class ClientTest {
     static class DemoCallback implements RedisCallback {
         private RedisRequest redisRequest;
 
-        DemoCallback(RedisRequest redisRequest) {
+        public DemoCallback(RedisRequest redisRequest) {
             this.redisRequest = redisRequest;
         }
 
         @Override
         public void run() {
-            if (atomicInteger.incrementAndGet() == TOTAL) {
-                redisRequest.getResult();
-                long time2 = System.currentTimeMillis();
-                System.out.println(time2);
-                long interval = time2 - time1;
-                System.out.println(interval);
-                System.out.println(TOTAL / ((double) interval));
+            //old statistic
+//            if (atomicInteger.incrementAndGet() == TOTAL) {
+//                redisRequest.getResult();
+//                long time2 = System.currentTimeMillis();
+//                System.out.println(time2);
+//                long interval = time2 - time1;
+//                System.out.println(interval);
+//                System.out.println(TOTAL / ((double) interval));
+//            }
+            ssss s = local.get(Thread.currentThread().getName());
+            if (s != null) {
+                s.cnt++;
+            } else {
+                s = new ssss();
+                local.put(Thread.currentThread().getName(), s);
             }
         }
     }

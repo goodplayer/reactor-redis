@@ -1,15 +1,15 @@
 package reactoredis;
 
 /**
- * Created with IntelliJ IDEA.
- * User: sunhao
- * Date: 13-11-30
- * Time: 下午2:48
+ *
+ * @param <R> 请求类型
+ * @param <D> 请求数据
+ * @param <B> 返回结果
  */
-public interface RedisRequest {
-    public RedisCommand getCmd();
-    public byte[] getData();
+public interface RedisRequest<R, D, B> {
+    public R getCmd();
+    public D getData();
     public RedisCallback getCallback();
-    public byte[] getResult();
-    public void setResult(byte[] result);
+    public B getResult();
+    public void setResult(B result);
 }

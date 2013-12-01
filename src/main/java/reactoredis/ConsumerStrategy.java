@@ -6,11 +6,13 @@ import redis.clients.jedis.Jedis;
 import java.util.concurrent.ExecutorService;
 
 /**
- * Created with IntelliJ IDEA.
- * User: sunhao
- * Date: 13-11-30
- * Time: 下午3:00
+ * 事件消费策略
+ *
+ * @param <H> 消费者工具或消费者助手
+ * @param <R> 请求类型
+ * @param <D> 请求数据
+ * @param <B> 响应结果
  */
-public interface ConsumerStrategy {
-    public void consumeEvent(Event<RedisRequest> event, Jedis jedis, ExecutorService executorService);
+public interface ConsumerStrategy<H, R, D, B> {
+    public void consumeEvent(Event<RedisRequest<R, D, B>> event, H helper, ExecutorService executorService);
 }
