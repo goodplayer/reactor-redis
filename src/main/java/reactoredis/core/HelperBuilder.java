@@ -1,4 +1,4 @@
-package reactoredis;
+package reactoredis.core;
 
 /**
  * Created with IntelliJ IDEA.
@@ -8,4 +8,5 @@ package reactoredis;
  */
 public interface HelperBuilder<H> {
     public H build();
+    public H[] build(int cnt);
 }

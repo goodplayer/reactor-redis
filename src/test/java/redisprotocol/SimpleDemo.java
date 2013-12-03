@@ -13,6 +13,6 @@ import java.io.IOException;
 public class SimpleDemo {
     public static void main(String[] args) throws IOException {
         RedisClient redisClient = new RedisClient("192.168.48.134", 6379);
-        redisClient.
+//        redisClient.
     }
 }

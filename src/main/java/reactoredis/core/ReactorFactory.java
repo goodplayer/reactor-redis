@@ -1,4 +1,4 @@
-package reactoredis;
+package reactoredis.core;
 
 import reactor.core.Reactor;
 
