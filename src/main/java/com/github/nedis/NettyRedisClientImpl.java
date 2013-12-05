@@ -17,6 +17,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -64,13 +65,18 @@ public class NettyRedisClientImpl implements RedisClient {
     }
 
     public NettyRedisClientImpl(String host, int port) {
+        this(host, port, Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+    }
+
+    public NettyRedisClientImpl(String host, int port, ExecutorService bossPool, ExecutorService workerPool) {
+
         this.host = host;
         this.port = port;
 
         channels = new DefaultChannelGroup();
         timer    = new HashedWheelTimer();
 
-        ClientSocketChannelFactory factory =  new  NioClientSocketChannelFactory(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1), Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1));
+        ClientSocketChannelFactory factory =  new  NioClientSocketChannelFactory(bossPool, workerPool);
         bootstrap = new ClientBootstrap(factory);
 
         pipeline = Channels.pipeline(new AutoReconnectHandler(this, channels, timer), new RedisDecoder(), new RedisClientHandler());
@@ -83,6 +89,27 @@ public class NettyRedisClientImpl implements RedisClient {
         timeout = 60;
         unit = TimeUnit.SECONDS;
 
+    }
+
+    public NettyRedisClientImpl(String host, int port, ExecutorService bossPool, int bossCnt, ExecutorService workerPool, int workerCnt) {
+        this.host = host;
+        this.port = port;
+
+        channels = new DefaultChannelGroup();
+        timer    = new HashedWheelTimer();
+
+        ClientSocketChannelFactory factory =  new  NioClientSocketChannelFactory(bossPool, workerPool, bossCnt, workerCnt);
+        bootstrap = new ClientBootstrap(factory);
+
+        pipeline = Channels.pipeline(new AutoReconnectHandler(this, channels, timer), new RedisDecoder(), new RedisClientHandler());
+
+        bootstrap.setPipeline(pipeline);
+
+        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+        channel = future.awaitUninterruptibly().getChannel();
+
+        timeout = 60;
+        unit = TimeUnit.SECONDS;
     }
 
     public void reconnect() {
